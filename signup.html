@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sign Up</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGGosrc7Ikl1xPnZri5sHuMvEUBB1f2YU",
+      authDomain: "mydiscordclone-fc2be.firebaseapp.com",
+      projectId: "mydiscordclone-fc2be",
+      storageBucket: "mydiscordclone-fc2be.appspot.com",
+      messagingSenderId: "599134697544",
+      appId: "1:599134697544:web:0961e501044324e52b807d",
+      measurementId: "G-K7RX8QB7BB"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.signUp = function () {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          alert("Account created!");
+          window.location.href = "home.html";
+        })
+        .catch((error) => {
+          alert("Error: " + error.message);
+        });
+    };
+  </script>
+</head>
+<body>
+  <h2>Sign Up</h2>
+  <input type="email" id="email" placeholder="Email" /><br><br>
+  <input type="password" id="password" placeholder="Password" /><br><br>
+  <button onclick="signUp()">Sign Up</button>
+</body>
+</html>
