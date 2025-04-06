@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Home</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding-bottom: 100px;
+      background-color: #f9f9f9;
+      text-align: center;
+    }
+
+    #serverList {
+      margin-top: 20px;
+    }
+
+    .server {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px auto;
+      background: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      width: 250px;
+      cursor: pointer;
+    }
+
+    .server img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 10px;
+      background-color: #5865F2;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background-color: #202225;
+      display: flex;
+      justify-content: space-around;
+      padding: 15px 0;
+    }
+
+    .bottom-nav button {
+      background-color: #5865F2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Your Servers</h1>
+  <div id="serverList">Loading...</div>
+  <button onclick="createServer()">+ Create Server</button>
+  <button onclick="joinServer()">Join Server</button>
+
+  <div class="bottom-nav">
+    <button onclick="location.href='home.html'">Home</button>
+    <button onclick="location.href='profile.html'">Profile</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      query,
+      where,
+      getDocs,
+      addDoc,
+      updateDoc,
+      doc
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGGosrc7Ikl1xPnZri5sHuMvEUBB1f2YU",
+      authDomain: "mydiscordclone-fc2be.firebaseapp.com",
+      projectId: "mydiscordclone-fc2be",
+      storageBucket: "mydiscordclone-fc2be.appspot.com",
+      messagingSenderId: "599134697544",
+      appId: "1:599134697544:web:0961e501044324e52b807d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const serverList = document.getElementById("serverList");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return (window.location.href = "login.html");
+      sessionStorage.setItem("currentUser", user.uid);
+
+      const q = query(collection(db, "servers"), where("members", "array-contains", user.uid));
+      const querySnapshot = await getDocs(q);
+
+      serverList.innerHTML = "";
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const div = document.createElement("div");
+        div.className = "server";
+        div.innerHTML = `
+          <img src="${data.serverIcon || 'default.png'}" />
+          <strong>${data.name}</strong>
+        `;
+        div.onclick = () => {
+          sessionStorage.setItem("currentServer", docSnap.id);
+          window.location.href = "server.html";
+        };
+        serverList.appendChild(div);
+      });
+    });
+
+    window.createServer = async function () {
+      const name = prompt("Enter server name:");
+      if (!name) return;
+      const user = auth.currentUser;
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = "image/*";
+      fileInput.click();
+
+      fileInput.onchange = async () => {
+        let icon = "";
+        if (fileInput.files.length > 0) {
+          icon = await toBase64(fileInput.files[0]);
+        }
+
+        await addDoc(collection(db, "servers"), {
+          name,
+          owner: user.uid,
+          inviteCode: code,
+          serverIcon: icon || "",
+          members: [user.uid],
+          createdAt: Date.now()
+        });
+
+        alert("Server created!");
+        location.reload();
+      };
+    };
+
+    window.joinServer = async function () {
+      const code = prompt("Enter invite code:");
+      if (!code) return;
+
+      const q = query(collection(db, "servers"), where("inviteCode", "==", code));
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) return alert("Invalid code.");
+
+      const serverDoc = snapshot.docs[0];
+      const members = serverDoc.data().members || [];
+      const user = auth.currentUser;
+
+      if (!members.includes(user.uid)) {
+        members.push(user.uid);
+        await updateDoc(doc(db, "servers", serverDoc.id), { members });
+      }
+
+      alert("Joined server!");
+      location.reload();
+    };
+
+    function toBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+  </script>
+</body>
+</html>
