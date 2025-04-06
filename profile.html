@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Profile</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGGosrc7Ikl1xPnZri5sHuMvEUBB1f2YU",
+      authDomain: "mydiscordclone-fc2be.firebaseapp.com",
+      projectId: "mydiscordclone-fc2be",
+      storageBucket: "mydiscordclone-fc2be.appspot.com",
+      messagingSenderId: "599134697544",
+      appId: "1:599134697544:web:0961e501044324e52b807d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const userDisplay = document.getElementById("userDisplay");
+    const pfpImg = document.getElementById("pfpImg");
+    const pfpInput = document.getElementById("pfpInput");
+    const displayNameInput = document.getElementById("displayName");
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        alert("Not logged in.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      currentUser = user;
+      sessionStorage.setItem("currentUser", user.uid);
+      userDisplay.textContent = `Logged in as: ${user.email}`;
+
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        if (data.profilePicture) pfpImg.src = data.profilePicture;
+        if (data.displayName) displayNameInput.value = data.displayName;
+      }
+    });
+
+    window.saveProfile = async function () {
+      const displayName = displayNameInput.value.trim();
+      let imageData = pfpImg.src; // Keep existing image unless new one is picked
+
+      if (pfpInput.files.length > 0) {
+        const file = pfpInput.files[0];
+        imageData = await toBase64(file);
+        pfpImg.src = imageData;
+      }
+
+      if (!currentUser) return;
+
+      await setDoc(doc(db, "users", currentUser.uid), {
+        email: currentUser.email,
+        displayName: displayName || "Anonymous",
+        profilePicture: imageData
+      });
+
+      alert("Profile saved!");
+    };
+
+    function toBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    window.logOut = function () {
+      signOut(auth).then(() => {
+        sessionStorage.clear();
+        window.location.href = "login.html";
+      });
+    };
+  </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f9f9f9;
+      padding: 40px;
+    }
+
+    img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #ccc;
+      margin-bottom: 10px;
+    }
+
+    input {
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+      width: 80%;
+      max-width: 300px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      background: #5865F2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #4752c4;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>User Profile</h2>
+  <p id="userDisplay">Loading...</p>
+
+  <img id="pfpImg" src="default.png" alt="Your Profile Picture"><br>
+  <input type="file" id="pfpInput" accept="image/*"><br>
+
+  <input type="text" id="displayName" placeholder="Display Name"><br>
+  <button onclick="saveProfile()">Save Profile</button><br><br>
+
+  <button onclick="logOut()">Log Out</button>
+
+</body>
+</html>
